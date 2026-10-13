@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Симулятор кибербезопасности</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #f3f4f6; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; font-family: sans-serif; padding: 20px;}
+        .phone { background: white; width: 100%; max-width: 400px; height: 800px; max-height: 90vh; border-radius: 30px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); overflow: hidden; display: flex; flex-direction: column; position: relative;}
+        .screen { padding: 20px; overflow-y: auto; flex-grow: 1; display: flex; flex-direction: column;}
+        .message-incoming { background: #e5e7eb; padding: 12px; border-radius: 15px 15px 15px 0; margin-bottom: 10px; align-self: flex-start; max-width: 85%;}
+        .message-outgoing { background: #3b82f6; color: white; padding: 12px; border-radius: 15px 15px 0 15px; margin-bottom: 10px; align-self: flex-end; max-width: 85%;}
+        .fade-in { animation: fadeIn 0.5s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .hidden { display: none !important; }
+        .memo-section { background: #f9fafb; border: 1px solid #e5e7eb; padding: 15px; border-radius: 10px; margin-bottom: 15px; }
+    </style>
+</head>
+<body>
+
+<div class="phone">
+    <!-- Шапка телефона -->
+    <div class="bg-blue-600 text-white p-4 font-bold text-center shadow-md z-10" id="header-title">
+        Новое сообщение
+    </div>
+
+    <!-- Область контента -->
+    <div class="screen bg-gray-50" id="screen-content">
+        <!-- Контент будет генерироваться через JavaScript -->
+    </div>
+
+    <!-- Панель кнопок (выборы пользователя) -->
+    <div class="p-4 bg-white border-t border-gray-200 z-10" id="action-panel">
+        <div id="choices-container" class="flex flex-col gap-2"></div>
+    </div>
+</div>
+
+<script>
+    const scenarios = [
+        {
+            title: "Неизвестный номер",
+            messages: [
+                "Привет! Это ты на этих фотках? 😱 Посмотри быстрее, там такое!!",
+                "👉 http://cdek-photo-look.ru/album49"
+            ],
+            choices: [
+                { text: "Перейти по ссылке и посмотреть", correct: false, feedback: "Ошибка! Это фишинг. Ссылка ведет на поддельный сайт, где у вас украдут пароль от мессенджера или банковские данные." },
+                { text: "Спросить «Кто это?»", correct: false, feedback: "Не лучшая идея. Мошенники только этого и ждут, чтобы втянуть вас в диалог. Лучше сразу блокировать." },
+                { text: "Игнорировать и заблокировать", correct: true, feedback: "Верно! Неизвестные ссылки от незнакомцев (и даже от знакомых, которых могли взломать) открывать нельзя." }
+            ]
+        },
+        {
+            title: "Служба доставки",
+            messages: [
+                "Здравствуйте, это курьер Ozon. Я привез ваш заказ, стою у подъезда.",
+                "У меня система зависла, продиктуйте код из СМС, чтобы я отметил выдачу?"
+            ],
+            choices: [
+                { text: "Продиктовать код", correct: false, feedback: "Ошибка! Курьеры не просят коды для входа. Этот код пришел для списания денег или оформления кредита." },
+                { text: "Сбросить звонок и проверить заказ в приложении", correct: true, feedback: "Абсолютно верно! Код из СМС — это ваша личная цифровая подпись. Его нельзя называть никому." }
+            ]
+        },
+        {
+            title: "Директор школы / Начальник",
+            messages: [
+                "Добрый день. С вами сейчас свяжется сотрудник профильного министерства Смирнов А.В.",
+                "Вопрос крайне серьезный, касается проверки счетов. Делайте всё, что он скажет, и не обсуждайте это ни с кем."
+            ],
+            choices: [
+                { text: "Написать: «Хорошо, жду звонка»", correct: false, feedback: "Ошибка! Это схема «Фейковый руководитель». Мошенники скопировали фото и имя вашего начальника." },
+                { text: "Самостоятельно позвонить начальнику по сотовой связи", correct: true, feedback: "Правильно! Всегда перезванивайте по обычной сотовой связи (не в мессенджере!), чтобы убедиться, что пишет именно этот человек." }
+            ]
+        },
+        {
+            title: "Родительский чат",
+            messages: [
+                "Мамочки, скидываю архив с фотографиями с утренника!",
+                "📎 Фото_Утренник.apk"
+            ],
+            choices: [
+                { text: "Скачать и открыть файл", correct: false, feedback: "Критическая ошибка! Расширение .apk — это установочный файл для Android, а не фото. Вы только что установили вирус." },
+                { text: "Написать, что формат файла подозрительный", correct: true, feedback: "Отлично! Фотографии должны быть в форматах .jpg, .png, .heic. Файлы .apk, .exe, .bat, .scr скачивать категорически нельзя!" }
+            ]
+        },
+        {
+            title: "Уведомление Госуслуги",
+            messages: [
+                "Внимание! Зафиксирована попытка изменения номера телефона в вашем профиле Госуслуг.",
+                "Если это не вы, срочно сообщите код из СМС оператору техподдержки в ответном сообщении для отмены операции."
+            ],
+            choices: [
+                { text: "Отправить код для отмены", correct: false, feedback: "Ошибка! Мошенники сами и пытаются взломать ваши Госуслуги, а код им нужен для сброса пароля." },
+                { text: "Ничего не отвечать, зайти на Госуслуги самому", correct: true, feedback: "Верно! Настоящие Госуслуги никогда не просят прислать код в чат или продиктовать по телефону." }
+            ]
+        },
+        {
+            title: "Звонок от сына (Аудио-дипфейк)",
+            messages: [
+                "Мам, я попал в ДТП, я виноват! Срочно переведи 50 тысяч на этот номер, иначе заведут дело, я не могу говорить, полиция рядом!"
+            ],
+            choices: [
+                { text: "Срочно перевести деньги", correct: false, feedback: "Ошибка! Голос можно легко подделать с помощью нейросетей (дипфейк)." },
+                { text: "Сбросить и перезвонить сыну на его сотовый номер", correct: true, feedback: "Идеально! Правило «Сбрось и перезвони по сотовой связи» — самая надежная защита от подделки голоса." }
+            ]
+        }
+    ];
+
+    let currentScenario = 0;
+    let score = 0;
+
+    const screenContent = document.getElementById('screen-content');
+    const choicesContainer = document.getElementById('choices-container');
+    const headerTitle = document.getElementById('header-title');
+    const actionPanel = document.getElementById('action-panel');
+
+    function renderScenario() {
+        if (currentScenario >= scenarios.length) {
+            showResults();
+            return;
+        }
+
+        const scenario = scenarios[currentScenario];
+        headerTitle.textContent = scenario.title;
+        screenContent.innerHTML = '';
+        choicesContainer.innerHTML = '';
+
+        // Отрисовка сообщений
+        scenario.messages.forEach((msg, index) => {
+            setTimeout(() => {
+                const msgEl = document.createElement('div');
+                msgEl.className = 'message-incoming fade-in';
+                msgEl.textContent = msg;
+                screenContent.appendChild(msgEl);
+                screenContent.scrollTop = screenContent.scrollHeight;
+            }, index * 800); // Имитация задержки печати
+        });
+
+        // Отрисовка кнопок после сообщений
+        setTimeout(() => {
+            scenario.choices.forEach(choice => {
+                const btn = document.createElement('button');
+                btn.className = 'w-full bg-blue-100 hover:bg-blue-200 text-blue-800 font-semibold py-3 px-4 border border-blue-300 rounded shadow-sm text-left transition-colors';
+                btn.textContent = choice.text;
+                btn.onclick = () => handleChoice(choice);
+                choicesContainer.appendChild(btn);
+            });
+        }, scenario.messages.length * 800 + 300);
+    }
+
+    function handleChoice(choice) {
+        // Очищаем кнопки
+        choicesContainer.innerHTML = '';
+        
+        // Показываем ответ пользователя
+        const userMsg = document.createElement('div');
+        userMsg.className = 'message-outgoing fade-in';
+        userMsg.textContent = choice.text;
+        screenContent.appendChild(userMsg);
+
+        if (choice.correct) score++;
+
+        // Показываем фидбек
+        setTimeout(() => {
+            const feedbackEl = document.createElement('div');
+            feedbackEl.className = `p-3 rounded mt-4 text-sm font-bold fade-in ${choice.correct ? 'bg-green-100 text-green-800 border border-green-300' : 'bg-red-100 text-red-800 border border-red-300'}`;
+            feedbackEl.textContent = choice.feedback;
+            screenContent.appendChild(feedbackEl);
+            screenContent.scrollTop = screenContent.scrollHeight;
+
+            // Кнопка "Далее"
+            setTimeout(() => {
+                const nextBtn = document.createElement('button');
+                nextBtn.className = 'w-full bg-gray-800 hover:bg-gray-900 text-white font-bold py-3 px-4 rounded mt-4';
+                nextBtn.textContent = currentScenario < scenarios.length - 1 ? "Следующая ситуация" : "Посмотреть результаты";
+                nextBtn.onclick = () => {
+                    currentScenario++;
+                    renderScenario();
+                };
+                choicesContainer.appendChild(nextBtn);
+            }, 1000);
+        }, 800);
+    }
+
+    function showResults() {
+        headerTitle.textContent = "Ваш результат: " + score + " из " + scenarios.length;
+        actionPanel.classList.add('hidden');
+        
+        screenContent.innerHTML = `
+            <div class="fade-in pb-10">
+                <h2 class="text-xl font-bold mb-4 text-center">Памятка по Кибербезопасности</h2>
+                
+                <div class="memo-section border-red-200 bg-red-50">
+                    <h3 class="text-red-700 font-bold text-lg mb-2">🛑 ВЗРОСЛЫМ: Основные правила</h3>
+                    <ul class="list-disc pl-5 space-y-2 text-sm text-gray-800">
+                        <li><b>СМС-код = личная подпись.</b> Никогда не диктуйте коды курьерам, полиции, операторам связи или «Госуслугам».</li>
+                        <li><b>Правило «Сбрось и перезвони».</b> Звонит начальник, родственник в беде или банк? Положите трубку и наберите номер сами <b>по сотовой связи</b> (не в WhatsApp).</li>
+                        <li><b>Стоп-эмоции.</b> Если вас торопят, пугают потерей денег или уголовным делом — это 100% мошенники.</li>
+                        <li><b>Бабушки и дедушки.</b> Научите старших правилу: "Без моего разрешения ничего никуда не переводим и не диктуем".</li>
+                    </ul>
+                </div>
+
+                <div class="memo-section border-orange-200 bg-orange-50">
+                    <h3 class="text-orange-700 font-bold text-lg mb-2">⚠️ Внимание к файлам</h3>
+                    <p class="text-sm mb-2">Мошенники прячут вирусы под видом фото и квитанций. <b>НЕ СКАЧИВАЙТЕ файлы с расширениями:</b></p>
+                    <ul class="list-disc pl-5 space-y-1 text-sm text-gray-800 font-mono">
+                        <li><b>.apk</b> — вирусы для Android</li>
+                        <li><b>.exe, .bat, .cmd</b> — программы-вирусы (Windows)</li>
+                        <li><b>.scr</b> — старые заставки, маскируют под фото</li>
+                        <li><b>.iso, .img</b> — образы дисков (внутри вирусы)</li>
+                    </ul>
+                    <p class="text-xs text-gray-500 mt-2">* Настоящие фото — это .jpg, .png, .heic</p>
+                </div>
+
+                <div class="memo-section border-green-200 bg-green-50">
+                    <h3 class="text-green-700 font-bold text-lg mb-2">👶 ДЕТЯМ: Что объяснить</h3>
+                    <ul class="list-disc pl-5 space-y-2 text-sm text-gray-800">
+                        <li><b>В интернете нет лиц.</b> Просит денег друг? Его могли взломать. Перезвони другу.</li>
+                        <li><b>Никаких бесплатных чипов.</b> Скачивая «взломанные игры» из браузера, ты скачиваешь вирус, который украдет мамины деньги.</li>
+                        <li><b>Семейный пароль.</b> Придумайте секретное слово. Если звонит "мама" с незнакомого номера и просит денег — пусть назовет пароль.</li>
+                        <li><b>«Я на твоей стороне».</b> Скажите ребенку: "Если ты случайно скачал вирус или перешел по плохой ссылке — сразу иди ко мне. Я не буду ругать, мы решим проблему вместе".</li>
+                    </ul>
+                </div>
+                
+                <button onclick="location.reload()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded mt-4">Пройти заново</button>
+            </div>
+        `;
+    }
+
+    // Запуск первой сцены
+    renderScenario();
+</script>
+</body>
+</html>
